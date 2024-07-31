@@ -32,6 +32,30 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None
 
+# Basic Descriptive Statistics
+        st.subheader("Basic Descriptive Statistics")
+        st.write(df.describe(include='all'))
+
+        # Data Types and Missing Values
+        st.subheader("Data Types and Missing Values")
+        st.write("**Data Types:**")
+        st.write(df.dtypes)
+        st.write("**Missing Values:**")
+        st.write(df.isnull().sum())
+
+        # Mode, Variance, Standard Deviation, Skewness, and Kurtosis
+        st.subheader("Mode, Variance, and Standard Deviation")
+        st.write("**Mode of Each Column:**")
+        st.write(df.mode().iloc[0])
+        st.write("**Variance:**")
+        st.write(df.var())
+        st.write("**Standard Deviation:**")
+        st.write(df.std())
+        st.write("**Skewness:**")
+        st.write(df.skew())
+        st.write("**Kurtosis:**")
+        st.write(df.kurt())
+
 # Function to calculate p-values for correlation matrix
 def correlation_p_values(df):
     """Calculate the p-values for the correlation matrix."""
