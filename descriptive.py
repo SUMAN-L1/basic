@@ -1,3 +1,11 @@
+To calculate the CAGR and CDVI for each column similarly to other parameters like mean, count, etc., you can update the code to handle these calculations for each numeric column individually. Here’s how you can integrate these calculations into the “Basic Descriptive Statistics” section:
+
+1. **CAGR**: Requires a column with a date to compute growth over time.
+2. **CDVI**: Requires the Coefficient of Variation (CV) and Adjusted R-squared for each column, if applicable.
+
+Here is the updated code with these calculations:
+
+```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -69,31 +77,30 @@ if uploaded_file:
         skewness = pd.DataFrame(df.skew(), columns=['Skewness'])
         kurtosis = pd.DataFrame(df.kurt(), columns=['Kurtosis'])
         
+        # Calculate CAGR and CDVI
+        cagr = {}
+        cdvi = {}
+        for col in df.select_dtypes(include=[np.number]).columns:
+            if len(df[col].dropna()) > 1:  # Ensure there's enough data
+                start_value = df[col].dropna().iloc[0]
+                end_value = df[col].dropna().iloc[-1]
+                periods = len(df.index.year.unique())
+                cagr[col] = calculate_cagr(start_value, end_value, periods)
+            else:
+                cagr[col] = np.nan
+
+            # Dummy calculation for CDVI as placeholder
+            # In practice, you would need CV and adjusted R-squared from a model
+            if 'Adjusted R-squared' in df.columns:
+                adj_r_squared = df['Adjusted R-squared'].mean()
+                cv = df['Coefficient of Variation'].mean() if 'Coefficient of Variation' in df.columns else np.nan
+                cdvi[col] = calculate_cdvi(cv, adj_r_squared)
+            else:
+                cdvi[col] = np.nan
+        
         # Combine all statistics into one DataFrame
-        basic_stats = pd.concat([desc_stats, data_types, missing_values, mode, variance, std_dev, skewness, kurtosis], axis=1)
-        
-        # Calculate CAGR and CDVI if possible
-        if 'Date' in df.columns:
-            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-            df = df.set_index('Date').sort_index()
-            start_value = df.iloc[0].dropna().mean()
-            end_value = df.iloc[-1].dropna().mean()
-            periods = len(df.index.year.unique())
-            cagr = calculate_cagr(start_value, end_value, periods)
-        else:
-            cagr = np.nan
-        
-        if 'Adjusted R-squared' in df.columns:
-            adj_r_squared = df['Adjusted R-squared'].mean()
-            cv = df['Coefficient of Variation'].mean() if 'Coefficient of Variation' in df.columns else np.nan
-            cdvi = calculate_cdvi(cv, adj_r_squared)
-        else:
-            cdvi = np.nan
-        
-        # Add CAGR and CDVI to the DataFrame
-        additional_stats = pd.DataFrame({'CAGR': [cagr], 'CDVI': [cdvi]})
-        additional_stats.index = ['Statistics']
-        basic_stats = pd.concat([basic_stats, additional_stats.T], axis=1)
+        additional_stats = pd.DataFrame({'CAGR': cagr, 'CDVI': cdvi})
+        basic_stats = pd.concat([desc_stats, data_types, missing_values, mode, variance, std_dev, skewness, kurtosis, additional_stats], axis=1)
         
         st.write(basic_stats)
 
@@ -202,13 +209,4 @@ if uploaded_file:
         if test_column:
             st.write(f"Performing t-test on {test_column}")
             t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
-            st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
-
-    else:
-        st.error("Failed to read the uploaded file. Please check the file format and try again.")
-else:
-    st.write("Please upload a file to get started.")
-
-# Discussion Section
-st.title("Discussion and Decision-Making Guidelines")
-
+            st.write(f"T-statistic: {t_stat}, P-value: {p
