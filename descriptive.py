@@ -8,6 +8,8 @@ from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.cluster import KMeans
+from wordcloud import WordCloud
 from datetime import datetime
 
 # Set up the app
@@ -34,12 +36,32 @@ def read_file(file):
 if uploaded_file:
     df = read_file(uploaded_file)
     if df is not None:
-        st.write("Data Preview:")
+        st.write("### Data Preview")
         st.write(df.head())
         
         # Basic Descriptive Statistics
         st.subheader("Basic Descriptive Statistics")
-        st.write(df.describe())
+        st.write(df.describe(include='all'))
+
+        # Data Types and Missing Values
+        st.subheader("Data Types and Missing Values")
+        st.write("**Data Types:**")
+        st.write(df.dtypes)
+        st.write("**Missing Values:**")
+        st.write(df.isnull().sum())
+
+        # Mode, Variance, Standard Deviation, Skewness, and Kurtosis
+        st.subheader("Mode, Variance, and Standard Deviation")
+        st.write("**Mode of Each Column:**")
+        st.write(df.mode().iloc[0])
+        st.write("**Variance:**")
+        st.write(df.var())
+        st.write("**Standard Deviation:**")
+        st.write(df.std())
+        st.write("**Skewness:**")
+        st.write(df.skew())
+        st.write("**Kurtosis:**")
+        st.write(df.kurt())
 
         # Correlation Analysis
         st.subheader("Correlation Matrix")
@@ -53,14 +75,17 @@ if uploaded_file:
 
         # Pairwise Scatter Plots
         st.subheader("Pairwise Scatter Plots")
-        pair_plot = sns.pairplot(df)
-        st.pyplot(pair_plot)
+        if len(df.select_dtypes(include=np.number).columns) > 1:
+            fig = sns.pairplot(df.select_dtypes(include=np.number))
+            st.pyplot(fig)
+        else:
+            st.write("Not enough quantitative variables to generate pairwise scatter plots.")
 
         # Principal Component Analysis (PCA)
         st.subheader("Principal Component Analysis (PCA)")
-        n_components = st.slider("Select number of PCA components", 1, min(len(df.columns), 10), 2)
+        n_components = st.slider("Select number of PCA components", 1, min(len(df.select_dtypes(include=[np.number]).columns), 10), 2)
         pca = PCA(n_components=n_components)
-        pca_result = pca.fit_transform(df.select_dtypes(include=[np.number]))
+        pca_result = pca.fit_transform(df.select_dtypes(include=[np.number]).fillna(0))
         pca_df = pd.DataFrame(pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
         st.write(pca_df)
 
@@ -92,28 +117,6 @@ if uploaded_file:
         fig, ax = plt.subplots()
         sns.clustermap(corr_matrix, annot=True, cmap='coolwarm')
         st.pyplot(fig)
-        
-        # Displaying Data Types
-        st.subheader("Data Types")
-        st.write(df.dtypes)
-
-        # Missing Values
-        st.subheader("Missing Values")
-        st.write(df.isnull().sum())
-
-        # Mode
-        st.subheader("Mode of Each Column")
-        st.write(df.mode().iloc[0])
-
-        # Variance and Standard Deviation
-        st.subheader("Variance and Standard Deviation")
-        st.write("Variance:\n", df.var())
-        st.write("Standard Deviation:\n", df.std())
-
-        # Skewness and Kurtosis
-        st.subheader("Skewness and Kurtosis")
-        st.write("Skewness:\n", df.skew())
-        st.write("Kurtosis:\n", df.kurt())
 
         # Feature Importance
         st.subheader("Feature Importance")
@@ -139,7 +142,7 @@ if uploaded_file:
         if date_column:
             df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
             df.set_index(date_column, inplace=True)
-            st.line_chart(df)
+            st.line_chart(df.select_dtypes(include=np.number))
 
             # Trend Analysis
             st.subheader("Trend Analysis")
@@ -169,6 +172,34 @@ if uploaded_file:
             st.write(f"Performing t-test on {test_column}")
             t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
             st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
+
+        # Qualitative Analysis
+        st.subheader("Qualitative Analysis")
+        qualitative_vars = df.select_dtypes(include='object').columns
+        if len(qualitative_vars) > 0:
+            for var in qualitative_vars:
+                st.write(f"#### {var} Frequency Distribution")
+                freq_dist = df[var].value_counts()
+                st.bar_chart(freq_dist)
+                st.write(f"**Interpretation:** Bar chart displays the frequency distribution of the qualitative variable '{var}'. It shows how often each category appears in the data.")
+                
+                st.write(f"#### {var} Countplot")
+                fig, ax = plt.subplots()
+                sns.countplot(data=df, x=var, ax=ax)
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
+                st.write(f"**Interpretation:** Countplot shows the count of each category in the qualitative variable '{var}'. It provides a visual representation of the distribution of categorical data.")
+        
+            # Word Cloud (for text data)
+            if 'text' in df.columns:
+                st.write("#### Word Cloud")
+                text_data = ' '.join(df['text'].dropna())
+                wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.axis('off')
+                st.pyplot(fig)
+                st.write("**Interpretation:** Word Cloud visualizes the most frequent words in the text data. Larger words indicate higher frequency.")
 
     else:
         st.error("Failed to read the uploaded file. Please check the file format and try again.")
