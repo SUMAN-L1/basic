@@ -50,14 +50,17 @@ if uploaded_file:
         })
 
         if not df.empty:
-            descriptive_stats = df.describe(include='all').T
+            # Filter numeric columns for statistical analysis
+            numeric_df = df.select_dtypes(include=np.number)
+
+            descriptive_stats = numeric_df.describe(include='all').T
 
             # Add additional statistics
-            descriptive_stats['Mode'] = df.mode().iloc[0]
-            descriptive_stats['Variance'] = df.var()
-            descriptive_stats['Standard Deviation'] = df.std()
-            descriptive_stats['Skewness'] = df.skew()
-            descriptive_stats['Kurtosis'] = df.kurt()
+            descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
+            descriptive_stats['Variance'] = numeric_df.var()
+            descriptive_stats['Standard Deviation'] = numeric_df.std()
+            descriptive_stats['Skewness'] = numeric_df.skew()
+            descriptive_stats['Kurtosis'] = numeric_df.kurt()
             
             # Merge descriptive stats with the basic stats DataFrame
             basic_stats = basic_stats.set_index('Column').join(descriptive_stats).reset_index()
