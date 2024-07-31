@@ -32,6 +32,20 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None
 
+# Function to calculate p-values for correlation matrix
+def correlation_p_values(df):
+    """Calculate the p-values for the correlation matrix."""
+    corr_matrix = df.corr()
+    p_values = pd.DataFrame(np.ones_like(corr_matrix), columns=corr_matrix.columns, index=corr_matrix.index)
+    
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i, len(corr_matrix.columns)):
+            if i != j:
+                _, p_value = stats.pearsonr(df.iloc[:, i], df.iloc[:, j])
+                p_values.iloc[i, j] = p_values.iloc[j, i] = p_value
+    
+    return p_values
+
 # If a file is uploaded
 if uploaded_file:
     df = read_file(uploaded_file)
@@ -72,6 +86,23 @@ if uploaded_file:
         fig, ax = plt.subplots()
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
+
+        # Calculate p-values
+        st.subheader("Correlation P-values")
+        p_values = correlation_p_values(df.select_dtypes(include=[np.number]))
+        st.write(p_values)
+
+        st.subheader("Correlation P-value Heatmap")
+        fig, ax = plt.subplots()
+        sns.heatmap(p_values, annot=True, cmap='coolwarm', ax=ax)
+        st.pyplot(fig)
+
+        # Highlight significant correlations
+        st.subheader("Significant Correlations")
+        significance_level = st.slider("Select significance level (alpha)", 0.01, 0.1, 0.05)
+        significant_corrs = corr_matrix[p_values < significance_level]
+        st.write(f"Significant correlations with p-value < {significance_level}:")
+        st.write(significant_corrs)
 
         # Pairwise Scatter Plots
         st.subheader("Pairwise Scatter Plots")
@@ -181,30 +212,8 @@ if uploaded_file:
                 st.write(f"#### {var} Frequency Distribution")
                 freq_dist = df[var].value_counts()
                 st.bar_chart(freq_dist)
-                st.write(f"**Interpretation:** Bar chart displays the frequency distribution of the qualitative variable '{var}'. It shows how often each category appears in the data.")
-                
-                st.write(f"#### {var} Countplot")
-                fig, ax = plt.subplots()
-                sns.countplot(data=df, x=var, ax=ax)
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
-                st.write(f"**Interpretation:** Countplot shows the count of each category in the qualitative variable '{var}'. It provides a visual representation of the distribution of categorical data.")
-        
-            # Word Cloud (for text data)
-            if 'text' in df.columns:
-                st.write("#### Word Cloud")
-                text_data = ' '.join(df['text'].dropna())
-                wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
-                fig, ax = plt.subplots(figsize=(10, 5))
-                ax.imshow(wordcloud, interpolation='bilinear')
-                ax.axis('off')
-                st.pyplot(fig)
-                st.write("**Interpretation:** Word Cloud visualizes the most frequent words in the text data. Larger words indicate higher frequency.")
+                st.write(f"**Interpretation:** Bar chart displays the frequency
 
-    else:
-        st.error("Failed to read the uploaded file. Please check the file format and try again.")
-else:
-    st.write("Please upload a file to get started.")
 
 # Discussion Section
 st.title("Discussion and Decision-Making Guidelines")
