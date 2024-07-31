@@ -31,18 +31,39 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None
 
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from scipy import stats
+
 # Function to calculate CAGR
 def calculate_cagr(series):
     if len(series) > 1:
-        return ((series.iloc[-1] / series.iloc[0]) ** (1 / (len(series) - 1))) - 1
+        cagr = ((series.iloc[-1] / series.iloc[0]) ** (1 / (len(series) - 1))) - 1
+        return cagr * 100  # Return CAGR in percentage
     return np.nan
+
+# Function to calculate R-squared for CDVI
+def calculate_r_squared(series):
+    X = np.arange(len(series)).reshape(-1, 1)  # Time index as feature
+    model = LinearRegression().fit(X, series)
+    return model.score(X, series)
 
 # Function to calculate CDVI
 def calculate_cdvi(series, r_squared):
-    if len(series) > 1:
+    if r_squared is not np.nan and len(series) > 1:
         cv = series.std() / series.mean()
-        return cv * np.sqrt(1 - r_squared)
+        cdvi = cv * np.sqrt(1 - r_squared)
+        return cdvi
     return np.nan
+
+# Function to determine significance level of CAGR
+def cagr_significance(cagr, series):
+    if not np.isnan(cagr):
+        mean = series.mean()
+        std_dev = series.std()
+        return "Significant" if abs(cagr) > (2 * std_dev / mean) else "Not Significant"
+    return "N/A"
 
 # If a file is uploaded
 if uploaded_file:
@@ -56,21 +77,19 @@ if uploaded_file:
         numeric_df = df.select_dtypes(include=np.number)
         descriptive_stats = numeric_df.describe(include='all').T
 
-        # CAGR Calculation
-        def calculate_cagr(series):
-            if len(series) > 1:
-                cagr = ((series.iloc[-1] / series.iloc[0]) ** (1 / (len(series) - 1))) - 1
-                return cagr * 100  # Return CAGR in percentage
-            return np.nan
-        
-        def cagr_significance(cagr, series):
-            if not np.isnan(cagr):
-                mean = series.mean()
-                std_dev = series.std()
-                return "Significant" if abs(cagr) > (2 * std_dev / mean) else "Not Significant"
-            return "N/A"
-        
+        # Calculate additional statistics
+        descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
+        descriptive_stats['Variance'] = numeric_df.var()
+        descriptive_stats['Standard Deviation'] = numeric_df.std()
+        descriptive_stats['Skewness'] = numeric_df.skew()
+        descriptive_stats['Kurtosis'] = numeric_df.kurt()
         descriptive_stats['CAGR (%)'] = numeric_df.apply(calculate_cagr)
+
+        # Calculate R-squared for CDVI
+        r_squared = numeric_df.apply(calculate_r_squared)
+        descriptive_stats['CDVI'] = numeric_df.apply(lambda col: calculate_cdvi(col, r_squared[col.name]))
+        
+        # Add significance levels for CAGR
         descriptive_stats['CAGR Significance'] = numeric_df.apply(lambda col: cagr_significance(calculate_cagr(col), col))
 
         basic_stats = pd.DataFrame({
@@ -80,7 +99,6 @@ if uploaded_file:
         }).set_index('Column').join(descriptive_stats).reset_index()
 
         st.write(basic_stats)
-
 
         # Correlation Analysis
         st.subheader("Correlation Analysis")
