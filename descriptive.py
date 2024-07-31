@@ -43,13 +43,14 @@ def compute_cagr(data, column):
     data['LogColumn'] = np.log(data[column])
     
     model = ols('LogColumn ~ Time', data=data).fit()
+    
     cagr = (np.exp(model.params['Time']) - 1) * 100  # Convert to percentage
     p_value = model.pvalues['Time']
     adj_r_squared = model.rsquared_adj
     
     return cagr, p_value, adj_r_squared
 
-# Function to compute mean, standard deviation, and coefficient of variation
+# Function to compute statistics
 def compute_statistics(data, column):
     mean_val = data[column].mean()
     std_val = data[column].std()
@@ -58,7 +59,12 @@ def compute_statistics(data, column):
 
 # Function to compute CDVI
 def compute_cdvi(cv, adj_r_squared):
-    return cv * sqrt(1 - adj_r_squared)
+    return cv * np.sqrt(1 - adj_r_squared)
+
+# Function to compute outliers
+def compute_outliers(data, column):
+    z_scores = np.abs(stats.zscore(data[[column]].dropna()))
+    return np.sum(z_scores > 3)
 
 # If a file is uploaded
 if uploaded_file:
@@ -72,34 +78,31 @@ if uploaded_file:
         numeric_df = df.select_dtypes(include=np.number)
         descriptive_stats = numeric_df.describe(include='all').T
 
-        # Calculate additional statistics
+        # Additional statistics
         descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
         descriptive_stats['Variance'] = numeric_df.var()
         descriptive_stats['Standard Deviation'] = numeric_df.std()
         descriptive_stats['Skewness'] = numeric_df.skew()
         descriptive_stats['Kurtosis'] = numeric_df.kurt()
+        descriptive_stats['CAGR (%)'] = numeric_df.apply(lambda col: compute_cagr(df, col.name)[0])
+        descriptive_stats['Adjusted R Squared'] = numeric_df.apply(lambda col: compute_cagr(df, col.name)[2])
+        descriptive_stats['CDVI'] = numeric_df.apply(lambda col: compute_cdvi(col.std() / col.mean() * 100, compute_cagr(df, col.name)[2]))
+        descriptive_stats['P-Value (CAGR)'] = numeric_df.apply(lambda col: compute_cagr(df, col.name)[1])
+        descriptive_stats['Min'] = numeric_df.min()
+        descriptive_stats['Max'] = numeric_df.max()
+        descriptive_stats['25th Percentile'] = numeric_df.quantile(0.25)
+        descriptive_stats['50th Percentile (Median)'] = numeric_df.median()
+        descriptive_stats['75th Percentile'] = numeric_df.quantile(0.75)
+        descriptive_stats['Number of Outliers'] = numeric_df.apply(lambda col: compute_outliers(df, col.name))
         
-        # Calculate CAGR, p-value, and CDVI
-        results = []
-        for column in numeric_df.columns:
-            cagr, p_value, adj_r_squared = compute_cagr(df, column)
-            mean_val, std_val, cv_val = compute_statistics(df, column)
-            cdvi = compute_cdvi(cv_val, adj_r_squared)
-            
-            results.append({
-                'Column': column,
-                'CAGR (%)': f"{cagr:.2f}",
-                'CAGR Significance': "Significant" if p_value < 0.05 else "Not Significant",
-                'Mean': f"{mean_val:.2f}",
-                'Standard Deviation': f"{std_val:.2f}",
-                'Coefficient of Variation (CV) (%)': f"{cv_val:.2f}",
-                'Adjusted R Squared': f"{adj_r_squared:.2f}",
-                'Cuddy Della Valle Index (CDVI)': f"{cdvi:.2f}"
-            })
-        
-        results_df = pd.DataFrame(results)
-        st.write(results_df)
+        basic_stats = pd.DataFrame({
+            'Column': df.columns,
+            'Data Type': df.dtypes,
+            'Missing Values': df.isnull().sum()
+        }).set_index('Column').join(descriptive_stats).reset_index()
 
+        st.write(basic_stats)
+        
         # Correlation Analysis
         st.subheader("Correlation Analysis")
         corr_matrix = numeric_df.corr()
