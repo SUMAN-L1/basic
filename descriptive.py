@@ -32,7 +32,14 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None
 
-# Basic Descriptive Statistics
+# If a file is uploaded
+if uploaded_file:
+    df = read_file(uploaded_file)
+    if df is not None:
+        st.write("### Data Preview")
+        st.write(df.head())
+        
+        # Basic Descriptive Statistics
         st.subheader("Basic Descriptive Statistics")
         st.write(df.describe(include='all'))
 
@@ -55,6 +62,7 @@ def read_file(file):
         st.write(df.skew())
         st.write("**Kurtosis:**")
         st.write(df.kurt())
+
 
 # Function to calculate p-values for correlation matrix
 def correlation_p_values(df):
