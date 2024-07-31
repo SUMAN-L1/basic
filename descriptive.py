@@ -76,8 +76,15 @@ if uploaded_file:
             if len(df[col].dropna()) > 1:  # Ensure there's enough data
                 start_value = df[col].dropna().iloc[0]
                 end_value = df[col].dropna().iloc[-1]
-                periods = len(df.index.year.unique())
-                cagr[col] = calculate_cagr(start_value, end_value, periods)
+                # Handle periods calculation
+                date_column = st.selectbox("Select the date column for CAGR calculation", df.columns)
+                if date_column:
+                    df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
+                    df.set_index(date_column, inplace=True)
+                    periods = df.index.to_period("Y").nunique()  # Calculate the number of unique years
+                    cagr[col] = calculate_cagr(start_value, end_value, periods)
+                else:
+                    cagr[col] = np.nan
             else:
                 cagr[col] = np.nan
 
@@ -207,3 +214,4 @@ if uploaded_file:
         st.error("Failed to read the uploaded file. Please check the file format and try again.")
 else:
     st.write("Please upload a file to get started.")
+
