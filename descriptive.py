@@ -39,31 +39,36 @@ if uploaded_file:
         st.write("### Data Preview")
         st.write(df.head())
         
+      if uploaded_file:
+    df = read_file(uploaded_file)
+    if df is not None:
+        st.write("### Data Preview")
+        st.write(df.head())
+
         # Basic Descriptive Statistics
         st.subheader("Basic Descriptive Statistics")
-        st.write(df.describe(include='all'))
 
-        # Data Types and Missing Values
-        st.subheader("Data Types and Missing Values")
-        st.write("**Data Types:**")
-        st.write(df.dtypes)
-        st.write("**Missing Values:**")
-        st.write(df.isnull().sum())
+        # Create a DataFrame for the Basic Descriptive Statistics table
+        basic_stats = pd.DataFrame({
+            'Column': df.columns,
+            'Data Type': df.dtypes,
+            'Missing Values': df.isnull().sum()
+        })
 
-        # Mode, Variance, Standard Deviation, Skewness, and Kurtosis
-        st.subheader("Mode, Variance, and Standard Deviation")
-        st.write("**Mode of Each Column:**")
-        st.write(df.mode().iloc[0])
-        st.write("**Variance:**")
-        st.write(df.var())
-        st.write("**Standard Deviation:**")
-        st.write(df.std())
-        st.write("**Skewness:**")
-        st.write(df.skew())
-        st.write("**Kurtosis:**")
-        st.write(df.kurt())
+        if not df.empty:
+            descriptive_stats = df.describe(include='all').T
 
+            # Add additional statistics
+            descriptive_stats['Mode'] = df.mode().iloc[0]
+            descriptive_stats['Variance'] = df.var()
+            descriptive_stats['Standard Deviation'] = df.std()
+            descriptive_stats['Skewness'] = df.skew()
+            descriptive_stats['Kurtosis'] = df.kurt()
+            
+            # Merge descriptive stats with the basic stats DataFrame
+            basic_stats = basic_stats.set_index('Column').join(descriptive_stats).reset_index()
 
+        st.write(basic_stats)
 # Function to calculate p-values for correlation matrix
 def correlation_p_values(df):
     """Calculate the p-values for the correlation matrix."""
