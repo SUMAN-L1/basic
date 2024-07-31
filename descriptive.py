@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 from datetime import datetime
 
 # Set up the app
-st.title("Descriptive Statistics and Advanced Analytics")
+st.title("Descriptive Statistics and Advanced Analytics by SumanEcon")
 
 # File uploader
 uploaded_file = st.file_uploader("Upload your data file (CSV or Excel)", type=['csv', 'xlsx'])
