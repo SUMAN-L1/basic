@@ -52,7 +52,10 @@ if uploaded_file:
     if df is not None:
         st.write("### Data Preview")
         st.write(df.head())
-        
+
+        # Filter numeric columns
+        numeric_df = df.select_dtypes(include=np.number)
+
         # Basic Descriptive Statistics
         st.subheader("Basic Descriptive Statistics")
 
@@ -60,22 +63,22 @@ if uploaded_file:
         basic_stats = pd.DataFrame({
             'Column': df.columns,
             'Data Type': df.dtypes,
-            'Missing Values': df.isnull().sum(),
-            'Mode': df.mode().iloc[0],
-            'Variance': df.var(),
-            'Standard Deviation': df.std(),
-            'Skewness': df.skew(),
-            'Kurtosis': df.kurt()
+            'Missing Values': df.isnull().sum()
         })
-
+        
+        # Add statistics for numeric columns only
+        if not numeric_df.empty:
+            basic_stats['Mode'] = numeric_df.mode().iloc[0]
+            basic_stats['Variance'] = numeric_df.var()
+            basic_stats['Standard Deviation'] = numeric_df.std()
+            basic_stats['Skewness'] = numeric_df.skew()
+            basic_stats['Kurtosis'] = numeric_df.kurt()
+        
         st.write(basic_stats)
-
-        # Data Types and Missing Values (already included in the table above)
-        st.write("**Note:** Basic Descriptive Statistics table includes Data Types, Missing Values, Mode, Variance, Standard Deviation, Skewness, and Kurtosis.")
 
         # Correlation Analysis
         st.subheader("Correlation Matrix")
-        corr_matrix = df.select_dtypes(include=np.number).corr()
+        corr_matrix = numeric_df.corr()
         st.write(corr_matrix)
         
         st.subheader("Correlation Heatmap")
@@ -85,7 +88,7 @@ if uploaded_file:
 
         # Calculate p-values
         st.subheader("Correlation P-values")
-        p_values = correlation_p_values(df.select_dtypes(include=[np.number]))
+        p_values = correlation_p_values(numeric_df)
         st.write(p_values)
 
         st.subheader("Correlation P-value Heatmap")
@@ -102,17 +105,17 @@ if uploaded_file:
 
         # Pairwise Scatter Plots
         st.subheader("Pairwise Scatter Plots")
-        if len(df.select_dtypes(include=np.number).columns) > 1:
-            fig = sns.pairplot(df.select_dtypes(include=np.number))
+        if len(numeric_df.columns) > 1:
+            fig = sns.pairplot(numeric_df)
             st.pyplot(fig)
         else:
             st.write("Not enough quantitative variables to generate pairwise scatter plots.")
 
         # Principal Component Analysis (PCA)
         st.subheader("Principal Component Analysis (PCA)")
-        n_components = st.slider("Select number of PCA components", 1, min(len(df.select_dtypes(include=[np.number]).columns), 10), 2)
+        n_components = st.slider("Select number of PCA components", 1, min(len(numeric_df.columns), 10), 2)
         pca = PCA(n_components=n_components)
-        pca_result = pca.fit_transform(df.select_dtypes(include=[np.number]).fillna(0))
+        pca_result = pca.fit_transform(numeric_df.fillna(0))
         pca_df = pd.DataFrame(pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
         st.write(pca_df)
 
@@ -129,7 +132,7 @@ if uploaded_file:
         st.subheader("Correlation Circle")
         pca_components = pca.components_
         fig, ax = plt.subplots()
-        for i, v in enumerate(df.select_dtypes(include=[np.number]).columns):
+        for i, v in enumerate(numeric_df.columns):
             ax.arrow(0, 0, pca_components[0, i], pca_components[1, i], head_width=0.05, head_length=0.05, color='b')
             ax.text(pca_components[0, i]*1.1, pca_components[1, i]*1.1, v, color='r')
         ax.set_xlim([-1, 1])
@@ -183,25 +186,18 @@ if uploaded_file:
         st.subheader("Outlier Detection")
         method = st.selectbox("Select outlier detection method", ["Z-score", "IQR"])
         if method == "Z-score":
-            z_scores = np.abs(stats.zscore(df.select_dtypes(include=[np.number])))
+            z_scores = np.abs(stats.zscore(numeric_df))
             outliers = (z_scores > 3).sum(axis=1)
             st.write("Number of outliers detected per row:", outliers)
         elif method == "IQR":
-            Q1 = df.quantile(0.25)
-            Q3 = df.quantile(0.75)
+            Q1 = numeric_df.quantile(0.25)
+            Q3 = numeric_df.quantile(0.75)
             IQR = Q3 - Q1
-            outliers = ((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).sum(axis=1)
+            outliers = ((numeric_df < (Q1 - 1.5 * IQR)) | (numeric_df > (Q3 + 1.5 * IQR))).sum(axis=1)
             st.write("Number of outliers detected per row:", outliers)
 
-        # Hypothesis Testing
-        st.subheader("Hypothesis Testing")
-        test_column = st.selectbox("Select the column for hypothesis testing", df.columns)
-        if test_column:
-            st.write(f"Performing t-test on {test_column}")
-            t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
-            st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
-
         # Qualitative Analysis
+        qualitative_vars = df.select_dtypes(include=[object]).columns
         if len(qualitative_vars) > 0:
             st.subheader("Qualitative Analysis")
 
@@ -234,7 +230,6 @@ if uploaded_file:
         st.error("Failed to read the uploaded file. Please check the file format and try again.")
 else:
     st.write("Please upload a file to get started.")
-
 
 # Discussion Section
 st.title("Discussion and Decision-Making Guidelines")
