@@ -38,12 +38,6 @@ if uploaded_file:
     if df is not None:
         st.write("### Data Preview")
         st.write(df.head())
-        
-      if uploaded_file:
-    df = read_file(uploaded_file)
-    if df is not None:
-        st.write("### Data Preview")
-        st.write(df.head())
 
         # Basic Descriptive Statistics
         st.subheader("Basic Descriptive Statistics")
@@ -69,6 +63,7 @@ if uploaded_file:
             basic_stats = basic_stats.set_index('Column').join(descriptive_stats).reset_index()
 
         st.write(basic_stats)
+        
 # Function to calculate p-values for correlation matrix
 def correlation_p_values(df):
     """Calculate the p-values for the correlation matrix."""
