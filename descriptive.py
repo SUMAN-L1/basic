@@ -171,6 +171,7 @@ if uploaded_file:
         st.subheader("Time Series Analysis")
         date_column = st.selectbox("Select the date column for time series analysis", df.columns)
         if date_column:
+            # Convert the selected column to datetime
             df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
             df.set_index(date_column, inplace=True)
             st.line_chart(df.select_dtypes(include=np.number))
