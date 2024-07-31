@@ -81,44 +81,7 @@ def correlation_p_values(df):
     
     return p_values
 
-# If a file is uploaded
-if uploaded_file:
-    df = read_file(uploaded_file)
-    if df is not None:
-        st.write("### Data Preview")
-        st.write(df.head())
 
-        # Filter numeric columns
-        numeric_df = df.select_dtypes(include=np.number)
-
-        # Basic Descriptive Statistics
-        st.subheader("Basic Descriptive Statistics")
-
-        # Create a DataFrame for the Basic Descriptive Statistics table
-        basic_stats = pd.DataFrame({
-            'Column': df.columns,
-            'Data Type': df.dtypes,
-            'Missing Values': df.isnull().sum()
-        })
-
-        if not numeric_df.empty:
-            basic_stats = basic_stats.set_index('Column').join(
-                numeric_df.describe().T[['mean', '50%', 'std', 'min', 'max', '25%', '75%']]
-                .rename(columns={
-                    '50%': 'Median',
-                    '25%': '25th Percentile',
-                    '75%': '75th Percentile'
-                })
-            ).reset_index()
-
-            # Adding mode, variance, standard deviation, skewness, and kurtosis
-            basic_stats['Mode'] = numeric_df.mode().iloc[0]
-            basic_stats['Variance'] = numeric_df.var()
-            basic_stats['Standard Deviation'] = numeric_df.std()
-            basic_stats['Skewness'] = numeric_df.skew()
-            basic_stats['Kurtosis'] = numeric_df.kurt()
-
-        st.write(basic_stats)
 
         # Correlation Analysis
         st.subheader("Correlation Matrix")
