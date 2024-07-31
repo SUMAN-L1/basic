@@ -1,11 +1,3 @@
-To calculate the CAGR and CDVI for each column similarly to other parameters like mean, count, etc., you can update the code to handle these calculations for each numeric column individually. Here’s how you can integrate these calculations into the “Basic Descriptive Statistics” section:
-
-1. **CAGR**: Requires a column with a date to compute growth over time.
-2. **CDVI**: Requires the Coefficient of Variation (CV) and Adjusted R-squared for each column, if applicable.
-
-Here is the updated code with these calculations:
-
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -209,4 +201,9 @@ if uploaded_file:
         if test_column:
             st.write(f"Performing t-test on {test_column}")
             t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
-            st.write(f"T-statistic: {t_stat}, P-value: {p
+            st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
+
+    else:
+        st.error("Failed to read the uploaded file. Please check the file format and try again.")
+else:
+    st.write("Please upload a file to get started.")
