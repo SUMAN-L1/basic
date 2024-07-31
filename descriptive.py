@@ -53,165 +53,153 @@ if uploaded_file:
         st.write("### Data Preview")
         st.write(df.head())
         
-        # Identify quantitative and qualitative variables
-        quantitative_vars = df.select_dtypes(include=[np.number]).columns
-        qualitative_vars = df.select_dtypes(include='object').columns
+        # Basic Descriptive Statistics
+        st.subheader("Basic Descriptive Statistics")
 
-        # Quantitative Analysis
-        if len(quantitative_vars) > 0:
-            st.subheader("Quantitative Analysis")
+        # Create a DataFrame for the Basic Descriptive Statistics table
+        basic_stats = pd.DataFrame({
+            'Column': df.columns,
+            'Data Type': df.dtypes,
+            'Missing Values': df.isnull().sum(),
+            'Mode': df.mode().iloc[0],
+            'Variance': df.var(),
+            'Standard Deviation': df.std(),
+            'Skewness': df.skew(),
+            'Kurtosis': df.kurt()
+        })
 
-            # Basic Descriptive Statistics
-            st.subheader("Basic Descriptive Statistics")
-            st.write(df[quantitative_vars].describe())
+        st.write(basic_stats)
 
-            # Data Types and Missing Values
-            st.subheader("Data Types and Missing Values")
-            st.write("**Data Types:**")
-            st.write(df.dtypes)
-            st.write("**Missing Values:**")
-            st.write(df[quantitative_vars].isnull().sum())
+        # Data Types and Missing Values (already included in the table above)
+        st.write("**Note:** Basic Descriptive Statistics table includes Data Types, Missing Values, Mode, Variance, Standard Deviation, Skewness, and Kurtosis.")
 
-            # Mode, Variance, Standard Deviation, Skewness, and Kurtosis
-            st.subheader("Mode, Variance, and Standard Deviation")
-            st.write("**Mode of Each Column:**")
-            st.write(df[quantitative_vars].mode().iloc[0])
-            st.write("**Variance:**")
-            st.write(df[quantitative_vars].var())
-            st.write("**Standard Deviation:**")
-            st.write(df[quantitative_vars].std())
-            st.write("**Skewness:**")
-            st.write(df[quantitative_vars].skew())
-            st.write("**Kurtosis:**")
-            st.write(df[quantitative_vars].kurt())
+        # Correlation Analysis
+        st.subheader("Correlation Matrix")
+        corr_matrix = df.select_dtypes(include=np.number).corr()
+        st.write(corr_matrix)
+        
+        st.subheader("Correlation Heatmap")
+        fig, ax = plt.subplots()
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
+        st.pyplot(fig)
 
-            # Correlation Analysis
-            st.subheader("Correlation Matrix")
-            corr_matrix = df[quantitative_vars].corr()
-            st.write(corr_matrix)
-            
-            st.subheader("Correlation Heatmap")
+        # Calculate p-values
+        st.subheader("Correlation P-values")
+        p_values = correlation_p_values(df.select_dtypes(include=[np.number]))
+        st.write(p_values)
+
+        st.subheader("Correlation P-value Heatmap")
+        fig, ax = plt.subplots()
+        sns.heatmap(p_values, annot=True, cmap='coolwarm', ax=ax)
+        st.pyplot(fig)
+
+        # Highlight significant correlations
+        st.subheader("Significant Correlations")
+        significance_level = st.slider("Select significance level (alpha)", 0.01, 0.1, 0.05)
+        significant_corrs = corr_matrix[p_values < significance_level]
+        st.write(f"Significant correlations with p-value < {significance_level}:")
+        st.write(significant_corrs)
+
+        # Pairwise Scatter Plots
+        st.subheader("Pairwise Scatter Plots")
+        if len(df.select_dtypes(include=np.number).columns) > 1:
+            fig = sns.pairplot(df.select_dtypes(include=np.number))
+            st.pyplot(fig)
+        else:
+            st.write("Not enough quantitative variables to generate pairwise scatter plots.")
+
+        # Principal Component Analysis (PCA)
+        st.subheader("Principal Component Analysis (PCA)")
+        n_components = st.slider("Select number of PCA components", 1, min(len(df.select_dtypes(include=[np.number]).columns), 10), 2)
+        pca = PCA(n_components=n_components)
+        pca_result = pca.fit_transform(df.select_dtypes(include=[np.number]).fillna(0))
+        pca_df = pd.DataFrame(pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
+        st.write(pca_df)
+
+        # Scree Plot
+        st.subheader("Scree Plot")
+        explained_variance = pca.explained_variance_ratio_
+        fig, ax = plt.subplots()
+        ax.plot(range(1, len(explained_variance) + 1), explained_variance, 'o-')
+        ax.set_xlabel("Principal Component")
+        ax.set_ylabel("Explained Variance")
+        st.pyplot(fig)
+
+        # Correlation Circle
+        st.subheader("Correlation Circle")
+        pca_components = pca.components_
+        fig, ax = plt.subplots()
+        for i, v in enumerate(df.select_dtypes(include=[np.number]).columns):
+            ax.arrow(0, 0, pca_components[0, i], pca_components[1, i], head_width=0.05, head_length=0.05, color='b')
+            ax.text(pca_components[0, i]*1.1, pca_components[1, i]*1.1, v, color='r')
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+        ax.set_title("Correlation Circle")
+        st.pyplot(fig)
+        
+        # Clustered Heatmap
+        st.subheader("Clustered Heatmap")
+        fig, ax = plt.subplots()
+        sns.clustermap(corr_matrix, annot=True, cmap='coolwarm')
+        st.pyplot(fig)
+
+        # Feature Importance
+        st.subheader("Feature Importance")
+        target_column = st.selectbox("Select the target column for feature importance analysis", df.columns)
+        if target_column:
+            X = df.drop(columns=[target_column])
+            y = df[target_column]
+            X = pd.get_dummies(X, drop_first=True)  # Handle categorical variables
+            if y.nunique() <= 2:  # Binary classification
+                model = RandomForestClassifier()
+            else:  # Regression
+                model = RandomForestRegressor()
+            model.fit(X, y)
+            feature_importance = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
+            st.write(feature_importance)
             fig, ax = plt.subplots()
-            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
+            feature_importance.plot(kind='bar', ax=ax)
             st.pyplot(fig)
 
-            # Calculate p-values
-            st.subheader("Correlation P-values")
-            p_values = correlation_p_values(df[quantitative_vars])
-            st.write(p_values)
+        # Time Series Analysis (Quantitative Data Only)
+        st.subheader("Time Series Analysis")
+        date_column = st.selectbox("Select the date column for time series analysis", df.columns)
+        if date_column:
+            # Convert the selected column to datetime
+            df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
+            df.set_index(date_column, inplace=True)
+            st.line_chart(df.select_dtypes(include=np.number))
 
-            st.subheader("Correlation P-value Heatmap")
+            # Trend Analysis
+            st.subheader("Trend Analysis")
             fig, ax = plt.subplots()
-            sns.heatmap(p_values, annot=True, cmap='coolwarm', ax=ax)
+            for col in df.select_dtypes(include=[np.number]).columns:
+                sns.lineplot(data=df[col], label=col, ax=ax)
             st.pyplot(fig)
 
-            # Highlight significant correlations
-            st.subheader("Significant Correlations")
-            significance_level = st.slider("Select significance level (alpha)", 0.01, 0.1, 0.05)
-            significant_corrs = corr_matrix[p_values < significance_level]
-            st.write(f"Significant correlations with p-value < {significance_level}:")
-            st.write(significant_corrs)
+        # Outlier Detection
+        st.subheader("Outlier Detection")
+        method = st.selectbox("Select outlier detection method", ["Z-score", "IQR"])
+        if method == "Z-score":
+            z_scores = np.abs(stats.zscore(df.select_dtypes(include=[np.number])))
+            outliers = (z_scores > 3).sum(axis=1)
+            st.write("Number of outliers detected per row:", outliers)
+        elif method == "IQR":
+            Q1 = df.quantile(0.25)
+            Q3 = df.quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).sum(axis=1)
+            st.write("Number of outliers detected per row:", outliers)
 
-            # Pairwise Scatter Plots
-            st.subheader("Pairwise Scatter Plots")
-            if len(quantitative_vars) > 1:
-                fig = sns.pairplot(df[quantitative_vars])
-                st.pyplot(fig)
-            else:
-                st.write("Not enough quantitative variables to generate pairwise scatter plots.")
-
-            # Principal Component Analysis (PCA)
-            st.subheader("Principal Component Analysis (PCA)")
-            n_components = st.slider("Select number of PCA components", 1, min(len(quantitative_vars), 10), 2)
-            pca = PCA(n_components=n_components)
-            pca_result = pca.fit_transform(df[quantitative_vars].fillna(0))
-            pca_df = pd.DataFrame(pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
-            st.write(pca_df)
-
-            # Scree Plot
-            st.subheader("Scree Plot")
-            explained_variance = pca.explained_variance_ratio_
-            fig, ax = plt.subplots()
-            ax.plot(range(1, len(explained_variance) + 1), explained_variance, 'o-')
-            ax.set_xlabel("Principal Component")
-            ax.set_ylabel("Explained Variance")
-            st.pyplot(fig)
-
-            # Correlation Circle
-            st.subheader("Correlation Circle")
-            pca_components = pca.components_
-            fig, ax = plt.subplots()
-            for i, v in enumerate(quantitative_vars):
-                ax.arrow(0, 0, pca_components[0, i], pca_components[1, i], head_width=0.05, head_length=0.05, color='b')
-                ax.text(pca_components[0, i]*1.1, pca_components[1, i]*1.1, v, color='r')
-            ax.set_xlim([-1, 1])
-            ax.set_ylim([-1, 1])
-            ax.set_xlabel("PC1")
-            ax.set_ylabel("PC2")
-            ax.set_title("Correlation Circle")
-            st.pyplot(fig)
-            
-            # Clustered Heatmap
-            st.subheader("Clustered Heatmap")
-            fig, ax = plt.subplots()
-            sns.clustermap(corr_matrix, annot=True, cmap='coolwarm')
-            st.pyplot(fig)
-
-            # Feature Importance
-            st.subheader("Feature Importance")
-            target_column = st.selectbox("Select the target column for feature importance analysis", quantitative_vars)
-            if target_column:
-                X = df[quantitative_vars].drop(columns=[target_column])
-                y = df[target_column]
-                X = pd.get_dummies(X, drop_first=True)  # Handle categorical variables
-                if y.nunique() <= 2:  # Binary classification
-                    model = RandomForestClassifier()
-                else:  # Regression
-                    model = RandomForestRegressor()
-                model.fit(X, y)
-                feature_importance = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
-                st.write(feature_importance)
-                fig, ax = plt.subplots()
-                feature_importance.plot(kind='bar', ax=ax)
-                st.pyplot(fig)
-
-            # Time Series Analysis
-            st.subheader("Time Series Analysis")
-            date_column = st.selectbox("Select the date column for time series analysis", df.columns)
-            if date_column:
-                # Convert the selected column to datetime
-                df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
-                df.set_index(date_column, inplace=True)
-                st.line_chart(df[quantitative_vars])
-
-                # Trend Analysis
-                st.subheader("Trend Analysis")
-                fig, ax = plt.subplots()
-                for col in quantitative_vars:
-                    sns.lineplot(data=df[col], label=col, ax=ax)
-                st.pyplot(fig)
-
-            # Outlier Detection
-            st.subheader("Outlier Detection")
-            method = st.selectbox("Select outlier detection method", ["Z-score", "IQR"])
-            if method == "Z-score":
-                z_scores = np.abs(stats.zscore(df[quantitative_vars]))
-                outliers = (z_scores > 3).sum(axis=1)
-                st.write("Number of outliers detected per row:", outliers)
-            elif method == "IQR":
-                Q1 = df[quantitative_vars].quantile(0.25)
-                Q3 = df[quantitative_vars].quantile(0.75)
-                IQR = Q3 - Q1
-                outliers = ((df[quantitative_vars] < (Q1 - 1.5 * IQR)) | (df[quantitative_vars] > (Q3 + 1.5 * IQR))).sum(axis=1)
-                st.write("Number of outliers detected per row:", outliers)
-
-            # Hypothesis Testing
-            st.subheader("Hypothesis Testing")
-            test_column = st.selectbox("Select the column for hypothesis testing", quantitative_vars)
-            if test_column:
-                st.write(f"Performing t-test on {test_column}")
-                t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
-                st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
+        # Hypothesis Testing
+        st.subheader("Hypothesis Testing")
+        test_column = st.selectbox("Select the column for hypothesis testing", df.columns)
+        if test_column:
+            st.write(f"Performing t-test on {test_column}")
+            t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
+            st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
 
         # Qualitative Analysis
         if len(qualitative_vars) > 0:
