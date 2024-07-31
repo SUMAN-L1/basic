@@ -8,7 +8,8 @@ from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
+from sklearn.cluster import KMeans
+from wordcloud import WordCloud
 from datetime import datetime
 
 # Set up the app
@@ -31,77 +32,36 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None
 
-# Calculate Compound Annual Growth Rate (CAGR)
-def calculate_cagr(start_value, end_value, periods):
-    return (end_value / start_value) ** (1 / periods) - 1
-
-# Calculate Coefficient of Determination Variability Index (CDVI)
-def calculate_cdvi(cv, adj_r_squared):
-    return cv * np.sqrt(1 - adj_r_squared)
-
 # If a file is uploaded
 if uploaded_file:
     df = read_file(uploaded_file)
     if df is not None:
-        st.write("Data Preview:")
+        st.write("### Data Preview")
         st.write(df.head())
-
+        
         # Basic Descriptive Statistics
         st.subheader("Basic Descriptive Statistics")
-        
-        # Descriptive Statistics
-        desc_stats = df.describe(include='all').transpose()
-        
-        # Data Types
-        data_types = pd.DataFrame(df.dtypes, columns=['Data Type'])
-        
-        # Missing Values
-        missing_values = pd.DataFrame(df.isnull().sum(), columns=['Missing Values'])
-        
-        # Mode
-        mode = pd.DataFrame(df.mode().iloc[0], columns=['Mode'])
-        
-        # Variance and Standard Deviation
-        variance = pd.DataFrame(df.var(), columns=['Variance'])
-        std_dev = pd.DataFrame(df.std(), columns=['Standard Deviation'])
-        
-        # Skewness and Kurtosis
-        skewness = pd.DataFrame(df.skew(), columns=['Skewness'])
-        kurtosis = pd.DataFrame(df.kurt(), columns=['Kurtosis'])
-        
-        # Calculate CAGR and CDVI
-        cagr = {}
-        cdvi = {}
-        for col in df.select_dtypes(include=[np.number]).columns:
-            if len(df[col].dropna()) > 1:  # Ensure there's enough data
-                start_value = df[col].dropna().iloc[0]
-                end_value = df[col].dropna().iloc[-1]
-                # Handle periods calculation
-                date_column = st.selectbox("Select the date column for CAGR calculation", df.columns)
-                if date_column:
-                    df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
-                    df.set_index(date_column, inplace=True)
-                    periods = df.index.to_period("Y").nunique()  # Calculate the number of unique years
-                    cagr[col] = calculate_cagr(start_value, end_value, periods)
-                else:
-                    cagr[col] = np.nan
-            else:
-                cagr[col] = np.nan
+        st.write(df.describe(include='all'))
 
-            # Dummy calculation for CDVI as placeholder
-            # In practice, you would need CV and adjusted R-squared from a model
-            if 'Adjusted R-squared' in df.columns:
-                adj_r_squared = df['Adjusted R-squared'].mean()
-                cv = df['Coefficient of Variation'].mean() if 'Coefficient of Variation' in df.columns else np.nan
-                cdvi[col] = calculate_cdvi(cv, adj_r_squared)
-            else:
-                cdvi[col] = np.nan
-        
-        # Combine all statistics into one DataFrame
-        additional_stats = pd.DataFrame({'CAGR': cagr, 'CDVI': cdvi})
-        basic_stats = pd.concat([desc_stats, data_types, missing_values, mode, variance, std_dev, skewness, kurtosis, additional_stats], axis=1)
-        
-        st.write(basic_stats)
+        # Data Types and Missing Values
+        st.subheader("Data Types and Missing Values")
+        st.write("**Data Types:**")
+        st.write(df.dtypes)
+        st.write("**Missing Values:**")
+        st.write(df.isnull().sum())
+
+        # Mode, Variance, Standard Deviation, Skewness, and Kurtosis
+        st.subheader("Mode, Variance, and Standard Deviation")
+        st.write("**Mode of Each Column:**")
+        st.write(df.mode().iloc[0])
+        st.write("**Variance:**")
+        st.write(df.var())
+        st.write("**Standard Deviation:**")
+        st.write(df.std())
+        st.write("**Skewness:**")
+        st.write(df.skew())
+        st.write("**Kurtosis:**")
+        st.write(df.kurt())
 
         # Correlation Analysis
         st.subheader("Correlation Matrix")
@@ -115,14 +75,17 @@ if uploaded_file:
 
         # Pairwise Scatter Plots
         st.subheader("Pairwise Scatter Plots")
-        pair_plot = sns.pairplot(df)
-        st.pyplot(pair_plot)
+        if len(df.select_dtypes(include=np.number).columns) > 1:
+            fig = sns.pairplot(df.select_dtypes(include=np.number))
+            st.pyplot(fig)
+        else:
+            st.write("Not enough quantitative variables to generate pairwise scatter plots.")
 
         # Principal Component Analysis (PCA)
         st.subheader("Principal Component Analysis (PCA)")
-        n_components = st.slider("Select number of PCA components", 1, min(len(df.columns), 10), 2)
+        n_components = st.slider("Select number of PCA components", 1, min(len(df.select_dtypes(include=[np.number]).columns), 10), 2)
         pca = PCA(n_components=n_components)
-        pca_result = pca.fit_transform(df.select_dtypes(include=[np.number]))
+        pca_result = pca.fit_transform(df.select_dtypes(include=[np.number]).fillna(0))
         pca_df = pd.DataFrame(pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
         st.write(pca_df)
 
@@ -154,7 +117,7 @@ if uploaded_file:
         fig, ax = plt.subplots()
         sns.clustermap(corr_matrix, annot=True, cmap='coolwarm')
         st.pyplot(fig)
-        
+
         # Feature Importance
         st.subheader("Feature Importance")
         target_column = st.selectbox("Select the target column for feature importance analysis", df.columns)
@@ -179,7 +142,7 @@ if uploaded_file:
         if date_column:
             df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
             df.set_index(date_column, inplace=True)
-            st.line_chart(df)
+            st.line_chart(df.select_dtypes(include=np.number))
 
             # Trend Analysis
             st.subheader("Trend Analysis")
@@ -210,8 +173,107 @@ if uploaded_file:
             t_stat, p_val = stats.ttest_1samp(df[test_column].dropna(), 0)
             st.write(f"T-statistic: {t_stat}, P-value: {p_val}")
 
+        # Qualitative Analysis
+        st.subheader("Qualitative Analysis")
+        qualitative_vars = df.select_dtypes(include='object').columns
+        if len(qualitative_vars) > 0:
+            for var in qualitative_vars:
+                st.write(f"#### {var} Frequency Distribution")
+                freq_dist = df[var].value_counts()
+                st.bar_chart(freq_dist)
+                st.write(f"**Interpretation:** Bar chart displays the frequency distribution of the qualitative variable '{var}'. It shows how often each category appears in the data.")
+                
+                st.write(f"#### {var} Countplot")
+                fig, ax = plt.subplots()
+                sns.countplot(data=df, x=var, ax=ax)
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
+                st.write(f"**Interpretation:** Countplot shows the count of each category in the qualitative variable '{var}'. It provides a visual representation of the distribution of categorical data.")
+        
+            # Word Cloud (for text data)
+            if 'text' in df.columns:
+                st.write("#### Word Cloud")
+                text_data = ' '.join(df['text'].dropna())
+                wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.axis('off')
+                st.pyplot(fig)
+                st.write("**Interpretation:** Word Cloud visualizes the most frequent words in the text data. Larger words indicate higher frequency.")
+
     else:
         st.error("Failed to read the uploaded file. Please check the file format and try again.")
 else:
     st.write("Please upload a file to get started.")
 
+# Discussion Section
+st.title("Discussion and Decision-Making Guidelines")
+
+# Basic Descriptive Statistics Discussion
+st.subheader("Basic Descriptive Statistics")
+st.write("""
+- **Mean**: Provides the average value of the data. If the mean is significantly higher or lower than expected, it might indicate an issue or an area of interest.
+- **Median**: The middle value when data is sorted. If the median differs significantly from the mean, the data might be skewed.
+- **Standard Deviation**: Measures the dispersion of data from the mean. A high standard deviation indicates high variability, while a low standard deviation indicates that data points are close to the mean.
+- **Variance**: The square of the standard deviation, used to understand data spread.
+- **Skewness**: Indicates asymmetry in the data distribution. Positive skewness means a longer tail on the right side, and negative skewness means a longer tail on the left side.
+- **Kurtosis**: Indicates the "tailedness" of the data distribution. High kurtosis means heavy tails, while low kurtosis means light tails.
+""")
+
+# Correlation Analysis Discussion
+st.subheader("Correlation Analysis")
+st.write("""
+- **Correlation Matrix**: Shows the correlation coefficients between variables. A high positive value indicates a strong positive relationship, while a high negative value indicates a strong negative relationship.
+- **Heatmap**: Visual representation of the correlation matrix. Look for strong correlations (both positive and negative) to identify relationships between variables. Be cautious of multicollinearity in predictive models.
+""")
+
+# Pairwise Scatter Plots Discussion
+st.subheader("Pairwise Scatter Plots")
+st.write("""
+- **Pairwise Scatter Plots**: Show the relationship between pairs of variables. Look for linear or non-linear relationships and identify potential outliers. Patterns can help in choosing appropriate features for modeling.
+""")
+
+# Principal Component Analysis (PCA) Discussion
+st.subheader("Principal Component Analysis (PCA)")
+st.write("""
+- **Explained Variance**: Indicates the amount of variance explained by each principal component. Select the number of components that explain a sufficient amount of variance (e.g., 80%).
+- **Scree Plot**: Helps in deciding the number of principal components to retain.
+- **Correlation Circle**: Shows the relationship between original variables and principal components. Variables close to each other are positively correlated, while variables opposite to each other are negatively correlated.
+""")
+
+# Clustered Heatmap Discussion
+st.subheader("Clustered Heatmap")
+st.write("""
+- **Clustered Heatmap**: Helps in identifying groups of variables that are similar to each other. Use this information to reduce dimensionality or to create features that capture similar information.
+""")
+
+# Feature Importance Discussion
+st.subheader("Feature Importance")
+st.write("""
+- **Feature Importance**: Identifies which features are most important for predicting the target variable. Focus on the most important features for building predictive models. Drop less important features to reduce model complexity and improve performance.
+""")
+
+# Time Series Analysis Discussion
+st.subheader("Time Series Analysis")
+st.write("""
+- **Line Chart**: Visualize trends over time. Identify any seasonal patterns, trends, or anomalies. Use this information to forecast future values or to understand historical performance.
+""")
+
+# Trend Analysis Discussion
+st.subheader("Trend Analysis")
+st.write("""
+- **Trend Analysis**: Visualize long-term trends in the data. Consistent upward or downward trends can indicate growing or declining performance, which is useful for strategic planning and forecasting.
+""")
+
+# Outlier Detection Discussion
+st.subheader("Outlier Detection")
+st.write("""
+- **Z-score Method**: Points with a Z-score above 3 or below -3 are considered outliers. Investigate these outliers to understand if they are errors or significant events.
+- **IQR Method**: Points outside the range of [Q1 - 1.5*IQR, Q3 + 1.5*IQR] are considered outliers. Similar to the Z-score method, investigate these points to determine their cause.
+""")
+
+# Hypothesis Testing Discussion
+st.subheader("Hypothesis Testing")
+st.write("""
+- **T-test**: Compares the mean of a sample to a known value (e.g., 0). A low p-value (typically < 0.05) indicates that the sample mean is significantly different from the known value. Use this information to make data-driven decisions and validate assumptions.
+""")
