@@ -65,15 +65,24 @@ if uploaded_file:
             'Data Type': df.dtypes,
             'Missing Values': df.isnull().sum()
         })
-        
-        # Add statistics for numeric columns only
+
         if not numeric_df.empty:
+            basic_stats = basic_stats.set_index('Column').join(
+                numeric_df.describe().T[['mean', '50%', 'std', 'min', 'max', '25%', '75%']]
+                .rename(columns={
+                    '50%': 'Median',
+                    '25%': '25th Percentile',
+                    '75%': '75th Percentile'
+                })
+            ).reset_index()
+
+            # Adding mode, variance, standard deviation, skewness, and kurtosis
             basic_stats['Mode'] = numeric_df.mode().iloc[0]
             basic_stats['Variance'] = numeric_df.var()
             basic_stats['Standard Deviation'] = numeric_df.std()
             basic_stats['Skewness'] = numeric_df.skew()
             basic_stats['Kurtosis'] = numeric_df.kurt()
-        
+
         st.write(basic_stats)
 
         # Correlation Analysis
