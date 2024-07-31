@@ -212,8 +212,30 @@ if uploaded_file:
                 st.write(f"#### {var} Frequency Distribution")
                 freq_dist = df[var].value_counts()
                 st.bar_chart(freq_dist)
-                st.write(f"**Interpretation:** Bar chart displays the frequency
+                st.write(f"**Interpretation:** Bar chart displays the frequency distribution of the qualitative variable '{var}'. It shows how often each category appears in the data.")
+                
+                st.write(f"#### {var} Countplot")
+                fig, ax = plt.subplots()
+                sns.countplot(data=df, x=var, ax=ax)
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
+                st.write(f"**Interpretation:** Countplot shows the count of each category in the qualitative variable '{var}'. It provides a visual representation of the distribution of categorical data.")
+        
+            # Word Cloud (for text data)
+            if 'text' in df.columns:
+                st.write("#### Word Cloud")
+                text_data = ' '.join(df['text'].dropna())
+                wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.axis('off')
+                st.pyplot(fig)
+                st.write("**Interpretation:** Word Cloud visualizes the most frequent words in the text data. Larger words indicate higher frequency.")
 
+    else:
+        st.error("Failed to read the uploaded file. Please check the file format and try again.")
+else:
+    st.write("Please upload a file to get started.")
 
 # Discussion Section
 st.title("Discussion and Decision-Making Guidelines")
