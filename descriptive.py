@@ -174,3 +174,75 @@ if uploaded_file:
         st.error("Failed to read the uploaded file. Please check the file format and try again.")
 else:
     st.write("Please upload a file to get started.")
+
+# Discussion Section
+st.title("Discussion and Decision-Making Guidelines")
+
+# Basic Descriptive Statistics Discussion
+st.subheader("Basic Descriptive Statistics")
+st.write("""
+- **Mean**: Provides the average value of the data. If the mean is significantly higher or lower than expected, it might indicate an issue or an area of interest.
+- **Median**: The middle value when data is sorted. If the median differs significantly from the mean, the data might be skewed.
+- **Standard Deviation**: Measures the dispersion of data from the mean. A high standard deviation indicates high variability, while a low standard deviation indicates that data points are close to the mean.
+- **Variance**: The square of the standard deviation, used to understand data spread.
+- **Skewness**: Indicates asymmetry in the data distribution. Positive skewness means a longer tail on the right side, and negative skewness means a longer tail on the left side.
+- **Kurtosis**: Indicates the "tailedness" of the data distribution. High kurtosis means heavy tails, while low kurtosis means light tails.
+""")
+
+# Correlation Analysis Discussion
+st.subheader("Correlation Analysis")
+st.write("""
+- **Correlation Matrix**: Shows the correlation coefficients between variables. A high positive value indicates a strong positive relationship, while a high negative value indicates a strong negative relationship.
+- **Heatmap**: Visual representation of the correlation matrix. Look for strong correlations (both positive and negative) to identify relationships between variables. Be cautious of multicollinearity in predictive models.
+""")
+
+# Pairwise Scatter Plots Discussion
+st.subheader("Pairwise Scatter Plots")
+st.write("""
+- **Pairwise Scatter Plots**: Show the relationship between pairs of variables. Look for linear or non-linear relationships and identify potential outliers. Patterns can help in choosing appropriate features for modeling.
+""")
+
+# Principal Component Analysis (PCA) Discussion
+st.subheader("Principal Component Analysis (PCA)")
+st.write("""
+- **Explained Variance**: Indicates the amount of variance explained by each principal component. Select the number of components that explain a sufficient amount of variance (e.g., 80%).
+- **Scree Plot**: Helps in deciding the number of principal components to retain.
+- **Correlation Circle**: Shows the relationship between original variables and principal components. Variables close to each other are positively correlated, while variables opposite to each other are negatively correlated.
+""")
+
+# Clustered Heatmap Discussion
+st.subheader("Clustered Heatmap")
+st.write("""
+- **Clustered Heatmap**: Helps in identifying groups of variables that are similar to each other. Use this information to reduce dimensionality or to create features that capture similar information.
+""")
+
+# Feature Importance Discussion
+st.subheader("Feature Importance")
+st.write("""
+- **Feature Importance**: Identifies which features are most important for predicting the target variable. Focus on the most important features for building predictive models. Drop less important features to reduce model complexity and improve performance.
+""")
+
+# Time Series Analysis Discussion
+st.subheader("Time Series Analysis")
+st.write("""
+- **Line Chart**: Visualize trends over time. Identify any seasonal patterns, trends, or anomalies. Use this information to forecast future values or to understand historical performance.
+""")
+
+# Trend Analysis Discussion
+st.subheader("Trend Analysis")
+st.write("""
+- **Trend Analysis**: Visualize long-term trends in the data. Consistent upward or downward trends can indicate growing or declining performance, which is useful for strategic planning and forecasting.
+""")
+
+# Outlier Detection Discussion
+st.subheader("Outlier Detection")
+st.write("""
+- **Z-score Method**: Points with a Z-score above 3 or below -3 are considered outliers. Investigate these outliers to understand if they are errors or significant events.
+- **IQR Method**: Points outside the range of [Q1 - 1.5*IQR, Q3 + 1.5*IQR] are considered outliers. Similar to the Z-score method, investigate these points to determine their cause.
+""")
+
+# Hypothesis Testing Discussion
+st.subheader("Hypothesis Testing")
+st.write("""
+- **T-test**: Compares the mean of a sample to a known value (e.g., 0). A low p-value (typically < 0.05) indicates that the sample mean is significantly different from the known value. Use this information to make data-driven decisions and validate assumptions.
+""")
