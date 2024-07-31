@@ -7,10 +7,8 @@ import plotly.express as px
 from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
 from wordcloud import WordCloud
-from datetime import datetime
 
 # Set up the app
 st.title("Descriptive Statistics and Advanced Analytics by SumanEcon")
@@ -39,70 +37,56 @@ if uploaded_file:
         st.write("### Data Preview")
         st.write(df.head())
 
-        # Basic Descriptive Statistics
-        st.subheader("Basic Descriptive Statistics")
+        # Descriptive Statistics
+        st.subheader("Descriptive Statistics")
+        numeric_df = df.select_dtypes(include=np.number)
+        descriptive_stats = numeric_df.describe(include='all').T
+        descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
+        descriptive_stats['Variance'] = numeric_df.var()
+        descriptive_stats['Standard Deviation'] = numeric_df.std()
+        descriptive_stats['Skewness'] = numeric_df.skew()
+        descriptive_stats['Kurtosis'] = numeric_df.kurt()
 
-        # Create a DataFrame for the Basic Descriptive Statistics table
         basic_stats = pd.DataFrame({
             'Column': df.columns,
             'Data Type': df.dtypes,
             'Missing Values': df.isnull().sum()
-        })
-
-        if not df.empty:
-            # Filter numeric columns for statistical analysis
-            numeric_df = df.select_dtypes(include=np.number)
-
-            descriptive_stats = numeric_df.describe(include='all').T
-
-            # Add additional statistics
-            descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
-            descriptive_stats['Variance'] = numeric_df.var()
-            descriptive_stats['Standard Deviation'] = numeric_df.std()
-            descriptive_stats['Skewness'] = numeric_df.skew()
-            descriptive_stats['Kurtosis'] = numeric_df.kurt()
-            
-            # Merge descriptive stats with the basic stats DataFrame
-            basic_stats = basic_stats.set_index('Column').join(descriptive_stats).reset_index()
+        }).set_index('Column').join(descriptive_stats).reset_index()
 
         st.write(basic_stats)
-        
-# Function to calculate p-values for correlation matrix
-def correlation_p_values(df):
-    """Calculate the p-values for the correlation matrix."""
-    corr_matrix = df.corr()
-    p_values = pd.DataFrame(np.ones_like(corr_matrix), columns=corr_matrix.columns, index=corr_matrix.index)
-    
-    for i in range(len(corr_matrix.columns)):
-        for j in range(i, len(corr_matrix.columns)):
-            if i != j:
-                _, p_value = stats.pearsonr(df.iloc[:, i], df.iloc[:, j])
-                p_values.iloc[i, j] = p_values.iloc[j, i] = p_value
-    
-    return p_values
 
         # Correlation Analysis
-        st.subheader("Correlation Matrix")
+        st.subheader("Correlation Analysis")
         corr_matrix = numeric_df.corr()
+        st.write("**Correlation Matrix:**")
         st.write(corr_matrix)
-        
-        st.subheader("Correlation Heatmap")
+
+        st.write("**Correlation Heatmap:**")
         fig, ax = plt.subplots()
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
 
-        # Calculate p-values
-        st.subheader("Correlation P-values")
+        # Calculate p-values for correlation matrix
+        def correlation_p_values(df):
+            corr_matrix = df.corr()
+            p_values = pd.DataFrame(np.ones_like(corr_matrix), columns=corr_matrix.columns, index=corr_matrix.index)
+            for i in range(len(corr_matrix.columns)):
+                for j in range(i, len(corr_matrix.columns)):
+                    if i != j:
+                        _, p_value = stats.pearsonr(df.iloc[:, i], df.iloc[:, j])
+                        p_values.iloc[i, j] = p_values.iloc[j, i] = p_value
+            return p_values
+
+        st.write("**Correlation P-values:**")
         p_values = correlation_p_values(numeric_df)
         st.write(p_values)
 
-        st.subheader("Correlation P-value Heatmap")
+        st.write("**Correlation P-value Heatmap:**")
         fig, ax = plt.subplots()
         sns.heatmap(p_values, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
 
-        # Highlight significant correlations
-        st.subheader("Significant Correlations")
+        st.write("**Significant Correlations:**")
         significance_level = st.slider("Select significance level (alpha)", 0.01, 0.1, 0.05)
         significant_corrs = corr_matrix[p_values < significance_level]
         st.write(f"Significant correlations with p-value < {significance_level}:")
@@ -124,8 +108,7 @@ def correlation_p_values(df):
         pca_df = pd.DataFrame(pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
         st.write(pca_df)
 
-        # Scree Plot
-        st.subheader("Scree Plot")
+        st.write("**Scree Plot:**")
         explained_variance = pca.explained_variance_ratio_
         fig, ax = plt.subplots()
         ax.plot(range(1, len(explained_variance) + 1), explained_variance, 'o-')
@@ -133,8 +116,7 @@ def correlation_p_values(df):
         ax.set_ylabel("Explained Variance")
         st.pyplot(fig)
 
-        # Correlation Circle
-        st.subheader("Correlation Circle")
+        st.write("**Correlation Circle:**")
         pca_components = pca.components_
         fig, ax = plt.subplots()
         for i, v in enumerate(numeric_df.columns):
@@ -146,7 +128,7 @@ def correlation_p_values(df):
         ax.set_ylabel("PC2")
         ax.set_title("Correlation Circle")
         st.pyplot(fig)
-        
+
         # Clustered Heatmap
         st.subheader("Clustered Heatmap")
         fig, ax = plt.subplots()
@@ -159,11 +141,8 @@ def correlation_p_values(df):
         if target_column:
             X = df.drop(columns=[target_column])
             y = df[target_column]
-            X = pd.get_dummies(X, drop_first=True)  # Handle categorical variables
-            if y.nunique() <= 2:  # Binary classification
-                model = RandomForestClassifier()
-            else:  # Regression
-                model = RandomForestRegressor()
+            X = pd.get_dummies(X, drop_first=True)
+            model = RandomForestClassifier() if y.nunique() <= 2 else RandomForestRegressor()
             model.fit(X, y)
             feature_importance = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
             st.write(feature_importance)
@@ -171,17 +150,15 @@ def correlation_p_values(df):
             feature_importance.plot(kind='bar', ax=ax)
             st.pyplot(fig)
 
-        # Time Series Analysis (Quantitative Data Only)
+        # Time Series Analysis
         st.subheader("Time Series Analysis")
         date_column = st.selectbox("Select the date column for time series analysis", df.columns)
         if date_column:
-            # Convert the selected column to datetime
             df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
             df.set_index(date_column, inplace=True)
             st.line_chart(df.select_dtypes(include=np.number))
 
-            # Trend Analysis
-            st.subheader("Trend Analysis")
+            st.write("**Trend Analysis:**")
             fig, ax = plt.subplots()
             for col in df.select_dtypes(include=[np.number]).columns:
                 sns.lineplot(data=df[col], label=col, ax=ax)
