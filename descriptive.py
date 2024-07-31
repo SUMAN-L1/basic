@@ -8,6 +8,7 @@ from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.cluster import KMeans
+from sklearn.linear_model import LinearRegression
 from wordcloud import WordCloud
 
 # Set up the app
@@ -30,6 +31,19 @@ def read_file(file):
         st.error(f"Error reading file: {e}")
         return None
 
+# Function to calculate CAGR
+def calculate_cagr(series):
+    if len(series) > 1:
+        return ((series.iloc[-1] / series.iloc[0]) ** (1 / (len(series) - 1))) - 1
+    return np.nan
+
+# Function to calculate CDVI
+def calculate_cdvi(series, r_squared):
+    if len(series) > 1:
+        cv = series.std() / series.mean()
+        return cv * np.sqrt(1 - r_squared)
+    return np.nan
+
 # If a file is uploaded
 if uploaded_file:
     df = read_file(uploaded_file)
@@ -41,11 +55,23 @@ if uploaded_file:
         st.subheader("Descriptive Statistics")
         numeric_df = df.select_dtypes(include=np.number)
         descriptive_stats = numeric_df.describe(include='all').T
+
+        # Additional statistics
         descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
         descriptive_stats['Variance'] = numeric_df.var()
         descriptive_stats['Standard Deviation'] = numeric_df.std()
         descriptive_stats['Skewness'] = numeric_df.skew()
         descriptive_stats['Kurtosis'] = numeric_df.kurt()
+        descriptive_stats['CAGR'] = numeric_df.apply(calculate_cagr)
+        
+        # Calculate R-squared for CDVI
+        def calculate_r_squared(y):
+            X = np.arange(len(y)).reshape(-1, 1)  # Time index as feature
+            model = LinearRegression().fit(X, y)
+            return model.score(X, y)
+        
+        r_squared = numeric_df.apply(calculate_r_squared)
+        descriptive_stats['CDVI'] = numeric_df.apply(lambda col: calculate_cdvi(col, r_squared[col.name]))
 
         basic_stats = pd.DataFrame({
             'Column': df.columns,
