@@ -50,20 +50,9 @@ def compute_cagr(data, column):
     
     return cagr, p_value, adj_r_squared
 
-# Function to compute statistics
-def compute_statistics(data, column):
-    mean_val = data[column].mean()
-    std_val = data[column].std()
-    cv_val = (std_val / mean_val) * 100
-    return mean_val, std_val, cv_val
-
-# Function to compute CDVI
-def compute_cdvi(cv, adj_r_squared):
-    return cv * np.sqrt(1 - adj_r_squared)
-
 # Function to compute outliers
-def compute_outliers(data, column):
-    z_scores = np.abs(stats.zscore(data[[column]].dropna()))
+def compute_outliers(column):
+    z_scores = np.abs(stats.zscore(column.dropna()))
     return np.sum(z_scores > 3)
 
 # If a file is uploaded
@@ -76,31 +65,41 @@ if uploaded_file:
         # Descriptive Statistics
         st.subheader("Descriptive Statistics")
         numeric_df = df.select_dtypes(include=np.number)
+        
+        # Compute basic statistics
         descriptive_stats = numeric_df.describe(include='all').T
-
-        # Additional statistics
         descriptive_stats['Mode'] = numeric_df.mode().iloc[0]
         descriptive_stats['Variance'] = numeric_df.var()
         descriptive_stats['Standard Deviation'] = numeric_df.std()
         descriptive_stats['Skewness'] = numeric_df.skew()
         descriptive_stats['Kurtosis'] = numeric_df.kurt()
-        descriptive_stats['CAGR (%)'] = numeric_df.apply(lambda col: compute_cagr(df, col.name)[0])
-        descriptive_stats['Adjusted R Squared'] = numeric_df.apply(lambda col: compute_cagr(df, col.name)[2])
-        descriptive_stats['CDVI'] = numeric_df.apply(lambda col: compute_cdvi(col.std() / col.mean() * 100, compute_cagr(df, col.name)[2]))
-        descriptive_stats['P-Value (CAGR)'] = numeric_df.apply(lambda col: compute_cagr(df, col.name)[1])
+        
+        # Compute additional statistics
         descriptive_stats['Min'] = numeric_df.min()
         descriptive_stats['Max'] = numeric_df.max()
         descriptive_stats['25th Percentile'] = numeric_df.quantile(0.25)
         descriptive_stats['50th Percentile (Median)'] = numeric_df.median()
         descriptive_stats['75th Percentile'] = numeric_df.quantile(0.75)
-        descriptive_stats['Number of Outliers'] = numeric_df.apply(lambda col: compute_outliers(df, col.name))
+        descriptive_stats['Number of Outliers'] = numeric_df.apply(compute_outliers)
         
+        # Compute CAGR and related metrics
+        cagr_results = numeric_df.apply(lambda col: compute_cagr(df, col.name)[0])
+        p_value_results = numeric_df.apply(lambda col: compute_cagr(df, col.name)[1])
+        adj_r_squared_results = numeric_df.apply(lambda col: compute_cagr(df, col.name)[2])
+        cdvi_results = cagr_results * np.sqrt(1 - adj_r_squared_results)
+        
+        descriptive_stats['CAGR (%)'] = cagr_results
+        descriptive_stats['P-Value (CAGR)'] = p_value_results
+        descriptive_stats['Adjusted R Squared'] = adj_r_squared_results
+        descriptive_stats['CDVI'] = cdvi_results
+        
+        # Final descriptive statistics table
         basic_stats = pd.DataFrame({
             'Column': df.columns,
             'Data Type': df.dtypes,
             'Missing Values': df.isnull().sum()
         }).set_index('Column').join(descriptive_stats).reset_index()
-
+        
         st.write(basic_stats)
         
         # Correlation Analysis
@@ -113,7 +112,6 @@ if uploaded_file:
         fig, ax = plt.subplots()
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
-
         # Calculate p-values for correlation matrix
         def correlation_p_values(df):
             corr_matrix = df.corr()
