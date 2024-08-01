@@ -176,14 +176,14 @@ if uploaded_file:
         sns.clustermap(corr_matrix, annot=True, cmap='coolwarm')
         st.pyplot(fig)
 
-       # Feature Importance
+# Feature Importance
 st.subheader("Feature Importance")
 target_column = st.selectbox("Select the target column for feature importance analysis", df.columns)
 
 if target_column:
     # Ensure target column is quantitative
     if df[target_column].dtype in [np.int64, np.float64]:
-        X = df.drop(columns=[target_column])
+        X = df.drop(columns=[target_column, 'Year'], errors='ignore')
         
         # Select only quantitative columns
         X_numeric = X.select_dtypes(include=np.number)
@@ -215,7 +215,7 @@ if target_column:
     else:
         st.error("Please select a quantitative target column for feature importance analysis.")
 
-
+        
         # Time Series Analysis
         st.subheader("Time Series Analysis")
         date_column = st.selectbox("Select the date column for time series analysis", df.columns)
