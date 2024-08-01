@@ -18,7 +18,7 @@ from statsmodels.formula.api import ols
 st.title("Descriptive Statistics and Advanced Analytics by SumanEcon")
 
 # File uploader
-uploaded_file = st.file_uploader("Upload your data file (CSV or Excel)", type=['csv', 'xlsx'])
+uploaded_file = st.file_uploader("Upload your data file (CSV or Excel or xls)", type=['csv', 'xlsx','xls'])
 
 # Function to read file
 def read_file(file):
@@ -27,33 +27,14 @@ def read_file(file):
             return pd.read_csv(file)
         elif file.name.endswith('.xlsx'):
             return pd.read_excel(file)
+        elif file.name.endswith('.xls'):
+            return pd.read_xls(file)
         else:
             st.error("Unsupported file format")
             return None
     except Exception as e:
         st.error(f"Error reading file: {e}")
         return None
-
-# Function to compute CAGR and p-value
-def compute_cagr(data, column):
-    if isinstance(data, pd.Series):
-        data = data.to_frame()
-    
-    data['Time'] = np.arange(1, len(data) + 1)
-    data['LogColumn'] = np.log(data[column])
-    
-    model = ols('LogColumn ~ Time', data=data).fit()
-    
-    cagr = (np.exp(model.params['Time']) - 1) * 100  # Convert to percentage
-    p_value = model.pvalues['Time']
-    adj_r_squared = model.rsquared_adj
-    
-    return cagr, p_value, adj_r_squared
-
-# Function to compute outliers
-def compute_outliers(column):
-    z_scores = np.abs(stats.zscore(column.dropna()))
-    return np.sum(z_scores > 3)
 
 # If a file is uploaded
 if uploaded_file:
@@ -73,20 +54,12 @@ if uploaded_file:
         descriptive_stats['Standard Deviation'] = numeric_df.std()
         descriptive_stats['Skewness'] = numeric_df.skew()
         descriptive_stats['Kurtosis'] = numeric_df.kurt()
-        
-        # Compute additional statistics
-        descriptive_stats['Min'] = numeric_df.min()
-        descriptive_stats['Max'] = numeric_df.max()
-        descriptive_stats['25th Percentile'] = numeric_df.quantile(0.25)
-        descriptive_stats['50th Percentile (Median)'] = numeric_df.median()
-        descriptive_stats['75th Percentile'] = numeric_df.quantile(0.75)
-        descriptive_stats['Number of Outliers'] = numeric_df.apply(compute_outliers)
-        
+      
         # Compute CAGR and related metrics
-        cagr_results = numeric_df.apply(lambda col: compute_cagr(df, col.name)[0])
-        p_value_results = numeric_df.apply(lambda col: compute_cagr(df, col.name)[1])
-        adj_r_squared_results = numeric_df.apply(lambda col: compute_cagr(df, col.name)[2])
-        cdvi_results = cagr_results * np.sqrt(1 - adj_r_squared_results)
+        cagr_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[0])
+        p_value_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[1])
+        adj_r_squared_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[2])
+        cdvi_results = numeric_df.apply(lambda col: compute_cdvi((numeric_df[col.name].std() / numeric_df[col.name].mean()) * 100, compute_cagr(numeric_df, col.name)[2]))
         
         descriptive_stats['CAGR (%)'] = cagr_results
         descriptive_stats['P-Value (CAGR)'] = p_value_results
@@ -102,7 +75,10 @@ if uploaded_file:
         
         st.write(basic_stats)
         
-        # Correlation Analysis
+# Function to compute outliers
+def compute_outliers(column):
+    z_scores = np.abs(stats.zscore(column.dropna()))
+    return np.sum(z_scores > 3)# Correlation Analysis
         st.subheader("Correlation Analysis")
         corr_matrix = numeric_df.corr()
         st.write("**Correlation Matrix:**")
