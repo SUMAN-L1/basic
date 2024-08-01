@@ -66,7 +66,9 @@ if uploaded_file:
 
         # Descriptive Statistics
         st.subheader("Descriptive Statistics")
+        # Filter out qualitative columns and 'Year' column
         numeric_df = df.select_dtypes(include=np.number)
+        numeric_df = numeric_df.loc[:, ~numeric_df.columns.str.contains('Year', case=False)]
         
         # Compute basic statistics
         descriptive_stats = numeric_df.describe(include='all').T
@@ -94,9 +96,9 @@ if uploaded_file:
         
         # Final descriptive statistics table
         basic_stats = pd.DataFrame({
-            'Column': df.columns,
-            'Data Type': df.dtypes,
-            'Missing Values': df.isnull().sum()
+            'Column': numeric_df.columns,
+            'Data Type': numeric_df.dtypes,
+            'Missing Values': numeric_df.isnull().sum()
         }).set_index('Column').join(descriptive_stats).reset_index()
         
         st.write(basic_stats)
