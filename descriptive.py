@@ -74,6 +74,20 @@ if uploaded_file:
         }).set_index('Column').join(descriptive_stats).reset_index()
         
         st.write(basic_stats)
+
+# Function to compute CAGR and p-value
+def compute_cagr(data, column):
+    data = data[[column]].dropna().reset_index(drop=True)
+    data['Time'] = np.arange(1, len(data) + 1)
+    data['LogColumn'] = np.log(data[column])
+    
+    model = ols('LogColumn ~ Time', data=data).fit()
+    
+    cagr = (np.exp(model.params['Time']) - 1) * 100  # Convert to percentage
+    p_value = model.pvalues['Time']
+    adj_r_squared = model.rsquared_adj
+    
+    return cagr, p_value, adj_r_squared
         
 # Function to compute outliers
 def compute_outliers(column):
