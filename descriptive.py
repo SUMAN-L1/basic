@@ -113,84 +113,25 @@ if uploaded_file:
         fig, ax = plt.subplots()
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
-
-# Function to calculate correlation p-values
-def correlation_p_values(df):
-    corr_matrix = df.corr()
-    p_values = pd.DataFrame(np.ones_like(corr_matrix), columns=corr_matrix.columns, index=corr_matrix.index)
-    for i in range(len(corr_matrix.columns)):
-        for j in range(i, len(corr_matrix.columns)):
-            if i != j:
-                _, p_value = stats.pearsonr(df.iloc[:, i], df.iloc[:, j])
-                p_values.iloc[i, j] = p_values.iloc[j, i] = p_value
-    return p_values
-
-# Function to plot bubble matrix
-def plot_bubble_matrix(p_values):
-    plt.figure(figsize=(10, 8))
-    sns.scatterplot(x=p_values.columns, y=p_values.index, size=p_values.values, sizes=(20, 200), hue=p_values.values, palette='coolwarm', legend=None)
-    plt.title('Bubble Matrix of Correlation P-Values')
-    plt.xticks(rotation=90)
-    plt.show()
-
-# Function to plot contour plot
-def plot_contour(p_values):
-    plt.figure(figsize=(10, 8))
-    sns.kdeplot(data=p_values.values.flatten(), cmap='coolwarm', fill=True)
-    plt.title('Contour Plot of Correlation P-Values')
-    plt.show()
-
-# Function to plot dot plot
-def plot_dot_plot(p_values):
-    plt.figure(figsize=(12, 8))
-    for i in range(p_values.shape[0]):
-        plt.plot(p_values.columns, p_values.iloc[i], 'o', label=p_values.index[i])
-    plt.xticks(rotation=90)
-    plt.title('Dot Plot of Correlation P-Values')
-    plt.xlabel('Variables')
-    plt.ylabel('P-Values')
-    plt.legend()
-    plt.show()
-
-# If a file is uploaded
-if uploaded_file:
-    df = read_file(uploaded_file)
-    if df is not None:
-        st.write("### Data Preview")
-        st.write(df.head())
-
-        # Correlation Analysis
-        st.subheader("Correlation Analysis")
-        numeric_df = df.select_dtypes(include=np.number)
-        corr_matrix = numeric_df.corr()
-        st.write("**Correlation Matrix:**")
-        st.write(corr_matrix)
-
-        st.write("**Correlation Heatmap:**")
-        fig, ax = plt.subplots()
-        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
-        st.pyplot(fig)
-
+        
         # Calculate p-values for correlation matrix
-        p_values = correlation_p_values(numeric_df)
+        def correlation_p_values(df):
+            corr_matrix = df.corr()
+            p_values = pd.DataFrame(np.ones_like(corr_matrix), columns=corr_matrix.columns, index=corr_matrix.index)
+            for i in range(len(corr_matrix.columns)):
+                for j in range(i, len(corr_matrix.columns)):
+                    if i != j:
+                        _, p_value = stats.pearsonr(df.iloc[:, i], df.iloc[:, j])
+                        p_values.iloc[i, j] = p_values.iloc[j, i] = p_value
+            return p_values
 
         st.write("**Correlation P-values:**")
+        p_values = correlation_p_values(numeric_df)
         st.write(p_values)
 
-        # Display various visualizations for p-values
-        st.write("**Correlation P-value Bubble Matrix:**")
+        st.write("**Correlation P-value Heatmap:**")
         fig, ax = plt.subplots()
-        plot_bubble_matrix(p_values)
-        st.pyplot(fig)
-
-        st.write("**Correlation P-value Contour Plot:**")
-        fig, ax = plt.subplots()
-        plot_contour(p_values)
-        st.pyplot(fig)
-
-        st.write("**Correlation P-value Dot Plot:**")
-        fig, ax = plt.subplots()
-        plot_dot_plot(p_values)
+        sns.heatmap(p_values, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
 
         st.write("**Significant Correlations:**")
