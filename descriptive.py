@@ -89,6 +89,9 @@ if uploaded_file:
         descriptive_stats['Adjusted R Squared'] = adj_r_squared_results
         descriptive_stats['CDVI'] = cdvi_results
         
+        # Round all statistics to three decimal places
+        descriptive_stats = descriptive_stats.round(3)
+        
         # Final descriptive statistics table
         basic_stats = pd.DataFrame({
             'Column': df.columns,
@@ -97,7 +100,7 @@ if uploaded_file:
         }).set_index('Column').join(descriptive_stats).reset_index()
         
         st.write(basic_stats)
-
+        
         # Correlation Analysis
         st.subheader("Correlation Analysis")
         corr_matrix = numeric_df.corr()
