@@ -176,20 +176,45 @@ if uploaded_file:
         sns.clustermap(corr_matrix, annot=True, cmap='coolwarm')
         st.pyplot(fig)
 
-        # Feature Importance
-        st.subheader("Feature Importance")
-        target_column = st.selectbox("Select the target column for feature importance analysis", df.columns)
-        if target_column:
-            X = df.drop(columns=[target_column])
-            y = df[target_column]
-            X = pd.get_dummies(X, drop_first=True)
-            model = RandomForestClassifier() if y.nunique() <= 2 else RandomForestRegressor()
-            model.fit(X, y)
-            feature_importance = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
-            st.write(feature_importance)
-            fig, ax = plt.subplots()
-            feature_importance.plot(kind='bar', ax=ax)
-            st.pyplot(fig)
+       # Feature Importance
+st.subheader("Feature Importance")
+target_column = st.selectbox("Select the target column for feature importance analysis", df.columns)
+
+if target_column:
+    # Ensure target column is quantitative
+    if df[target_column].dtype in [np.int64, np.float64]:
+        X = df.drop(columns=[target_column])
+        
+        # Select only quantitative columns
+        X_numeric = X.select_dtypes(include=np.number)
+        
+        y = df[target_column]
+        
+        # Encode categorical features if any
+        X_encoded = pd.get_dummies(X_numeric, drop_first=True)
+        
+        # Choose appropriate model based on the target variable type
+        if y.nunique() <= 2:
+            model = RandomForestClassifier()
+        else:
+            model = RandomForestRegressor()
+        
+        # Fit the model
+        model.fit(X_encoded, y)
+        
+        # Compute feature importance
+        feature_importance = pd.Series(model.feature_importances_, index=X_encoded.columns).sort_values(ascending=False)
+        
+        # Display feature importance
+        st.write(feature_importance)
+        
+        # Plot feature importance
+        fig, ax = plt.subplots()
+        feature_importance.plot(kind='bar', ax=ax)
+        st.pyplot(fig)
+    else:
+        st.error("Please select a quantitative target column for feature importance analysis.")
+
 
         # Time Series Analysis
         st.subheader("Time Series Analysis")
