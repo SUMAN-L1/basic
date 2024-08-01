@@ -27,14 +27,35 @@ def read_file(file):
             return pd.read_csv(file)
         elif file.name.endswith('.xlsx'):
             return pd.read_excel(file)
-        elif file.name.endswith('.xls'):
-            return pd.read_xls(file)
         else:
             st.error("Unsupported file format")
             return None
     except Exception as e:
         st.error(f"Error reading file: {e}")
         return None
+
+# Function to compute CAGR and p-value
+def compute_cagr(data, column):
+    data = data[[column]].dropna().reset_index(drop=True)
+    data['Time'] = np.arange(1, len(data) + 1)
+    data['LogColumn'] = np.log(data[column])
+    
+    model = ols('LogColumn ~ Time', data=data).fit()
+    
+    cagr = (np.exp(model.params['Time']) - 1) * 100  # Convert to percentage
+    p_value = model.pvalues['Time']
+    adj_r_squared = model.rsquared_adj
+    
+    return cagr, p_value, adj_r_squared
+
+# Function to compute CDVI
+def compute_cdvi(cv, adj_r_squared):
+    return cv * np.sqrt(1 - adj_r_squared)
+
+# Function to compute outliers
+def compute_outliers(column):
+    z_scores = np.abs(stats.zscore(column.dropna()))
+    return np.sum(z_scores > 3)
 
 # If a file is uploaded
 if uploaded_file:
@@ -54,7 +75,7 @@ if uploaded_file:
         descriptive_stats['Standard Deviation'] = numeric_df.std()
         descriptive_stats['Skewness'] = numeric_df.skew()
         descriptive_stats['Kurtosis'] = numeric_df.kurt()
-        
+      
         # Compute CAGR and related metrics
         cagr_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[0])
         p_value_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[1])
@@ -111,7 +132,6 @@ if uploaded_file:
         significant_corrs = corr_matrix[p_values < significance_level]
         st.write(f"Significant correlations with p-value < {significance_level}:")
         st.write(significant_corrs)
-
 
         # Pairwise Scatter Plots
         st.subheader("Pairwise Scatter Plots")
