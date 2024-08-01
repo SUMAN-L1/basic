@@ -78,12 +78,14 @@ if uploaded_file:
       
         # Compute CAGR and related metrics
         cagr_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[0])
+        cv_results = numeric_df.apply(lambda col: (col.std() / col.mean()) * 100)
         p_value_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[1])
         adj_r_squared_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[2])
         cdvi_results = numeric_df.apply(lambda col: compute_cdvi((numeric_df[col.name].std() / numeric_df[col.name].mean()) * 100, compute_cagr(numeric_df, col.name)[2]))
         
         descriptive_stats['CAGR (%)'] = cagr_results
         descriptive_stats['P-Value (CAGR)'] = p_value_results
+        descriptive_stats['CV'] = cv_results
         descriptive_stats['Adjusted R Squared'] = adj_r_squared_results
         descriptive_stats['CDVI'] = cdvi_results
         
