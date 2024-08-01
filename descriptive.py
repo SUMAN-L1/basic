@@ -15,7 +15,7 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 
 # Set up the app
-st.title("Descriptive Statistics and Advanced Analytics by SumanEcon")
+st.title("Descriptive Statistics and Advanced Analytics by [SumanEcon]")
 
 # File uploader
 uploaded_file = st.file_uploader("Upload your data file (CSV or Excel or xls)", type=['csv', 'xlsx','xls'])
@@ -85,7 +85,7 @@ if uploaded_file:
         
         descriptive_stats['CAGR (%)'] = cagr_results
         descriptive_stats['P-Value (CAGR)'] = p_value_results
-        descriptive_stats['CV'] = cv_results
+        descriptive_stats['CV (%)'] = cv_results
         descriptive_stats['Adjusted R Squared'] = adj_r_squared_results
         descriptive_stats['CDVI'] = cdvi_results
         
