@@ -183,6 +183,7 @@ target_column = st.selectbox("Select the target column for feature importance an
 if target_column:
     # Ensure target column is quantitative
     if df[target_column].dtype in [np.int64, np.float64]:
+        # Drop the target column and the "Year" column if it exists
         X = df.drop(columns=[target_column, 'Year'], errors='ignore')
         
         # Select only quantitative columns
@@ -214,7 +215,6 @@ if target_column:
         st.pyplot(fig)
     else:
         st.error("Please select a quantitative target column for feature importance analysis.")
-
         
         # Time Series Analysis
         st.subheader("Time Series Analysis")
