@@ -54,7 +54,7 @@ if uploaded_file:
         descriptive_stats['Standard Deviation'] = numeric_df.std()
         descriptive_stats['Skewness'] = numeric_df.skew()
         descriptive_stats['Kurtosis'] = numeric_df.kurt()
-      
+        
         # Compute CAGR and related metrics
         cagr_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[0])
         p_value_results = numeric_df.apply(lambda col: compute_cagr(numeric_df, col.name)[1])
@@ -75,24 +75,7 @@ if uploaded_file:
         
         st.write(basic_stats)
 
-# Function to compute CAGR and p-value
-def compute_cagr(data, column):
-    data = data[[column]].dropna().reset_index(drop=True)
-    data['Time'] = np.arange(1, len(data) + 1)
-    data['LogColumn'] = np.log(data[column])
-    
-    model = ols('LogColumn ~ Time', data=data).fit()
-    
-    cagr = (np.exp(model.params['Time']) - 1) * 100  # Convert to percentage
-    p_value = model.pvalues['Time']
-    adj_r_squared = model.rsquared_adj
-    
-    return cagr, p_value, adj_r_squared
-        
-# Function to compute outliers
-def compute_outliers(column):
-    z_scores = np.abs(stats.zscore(column.dropna()))
-    return np.sum(z_scores > 3)# Correlation Analysis
+        # Correlation Analysis
         st.subheader("Correlation Analysis")
         corr_matrix = numeric_df.corr()
         st.write("**Correlation Matrix:**")
@@ -102,6 +85,7 @@ def compute_outliers(column):
         fig, ax = plt.subplots()
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
         st.pyplot(fig)
+
         # Calculate p-values for correlation matrix
         def correlation_p_values(df):
             corr_matrix = df.corr()
@@ -127,6 +111,7 @@ def compute_outliers(column):
         significant_corrs = corr_matrix[p_values < significance_level]
         st.write(f"Significant correlations with p-value < {significance_level}:")
         st.write(significant_corrs)
+
 
         # Pairwise Scatter Plots
         st.subheader("Pairwise Scatter Plots")
