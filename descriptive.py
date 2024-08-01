@@ -178,7 +178,8 @@ if uploaded_file:
 
 # Feature Importance
 st.subheader("Feature Importance")
-target_column = st.selectbox("Select the target column for feature importance analysis", df.columns)
+target_column_options = [col for col in df.columns if col != 'Year']
+target_column = st.selectbox("Select the target column for feature importance analysis", target_column_options)
 
 if target_column:
     # Ensure target column is quantitative
@@ -215,6 +216,7 @@ if target_column:
         st.pyplot(fig)
     else:
         st.error("Please select a quantitative target column for feature importance analysis.")
+
         
         # Time Series Analysis
         st.subheader("Time Series Analysis")
